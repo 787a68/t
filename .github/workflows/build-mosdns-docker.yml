@@ -19,10 +19,11 @@ jobs:
           # 获取最新的release信息
           LATEST_RELEASE=$(curl -s https://api.github.com/repos/pmkol/mosdns-x/releases/latest)
           VERSION=$(echo $LATEST_RELEASE | jq -r '.tag_name')
-          ASSETS_URL=$(echo $LATEST_RELEASE | jq -r '.assets[].browser_download_url | select(contains("mosdns-linux-arm64.zip"))')
+          # 注意：这里改为获取amd64版本
+          ASSETS_URL=$(echo $LATEST_RELEASE | jq -r '.assets[].browser_download_url | select(contains("mosdns-linux-amd64.zip"))')
           
           if [ -z "$ASSETS_URL" ]; then
-            echo "No arm64 binary found in latest release"
+            echo "No amd64 binary found in latest release"
             exit 1
           fi
           
@@ -36,42 +37,9 @@ jobs:
           mkdir -p build
           cd build
           echo "Downloading from: ${{ env.ASSETS_URL }}"
-          wget -O mosdns-linux-arm64.zip "${{ env.ASSETS_URL }}"
-          unzip mosdns-linux-arm64.zip
+          wget -O mosdns-linux-amd64.zip "${{ env.ASSETS_URL }}"
+          unzip mosdns-linux-amd64.zip
           chmod +x mosdns
-
-      - name: Create Dockerfile
-        run: |
-          cd build
-          cat > Dockerfile << 'EOF'
-FROM alpine:latest
-
-# 安装必要的依赖
-RUN apk add --no-cache ca-certificates
-
-# 创建非root用户
-RUN addgroup -S -g 1000 mosdns && \
-    adduser -S -u 1000 -G mosdns mosdns
-
-WORKDIR /app
-
-# 复制二进制文件
-COPY mosdns /app/mosdns
-RUN chmod +x /app/mosdns
-
-# 使用非root用户
-USER mosdns
-
-# 默认命令
-ENTRYPOINT ["/app/mosdns"]
-CMD ["--help"]
-EOF
-
-      - name: Set up QEMU for multi-arch build
-        uses: docker/setup-qemu-action@v2
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
 
       - name: Login to Docker Hub
         uses: docker/login-action@v2
@@ -82,8 +50,8 @@ EOF
       - name: Build and push Docker image
         uses: docker/build-push-action@v4
         with:
-          context: ./build
-          platforms: linux/arm64
+          context: .
+          platforms: linux/amd64
           push: true
           tags: |
             ${{ secrets.DOCKERHUB_USERNAME }}/mosdns:${{ env.VERSION }}
