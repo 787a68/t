@@ -9,7 +9,7 @@ RUN addgroup -S -g 1000 mosdns && \
 
 WORKDIR /app
 
-# 复制二进制文件 (会在构建时从build目录复制过来)
+# 复制二进制文件（在当前构建目录中）
 COPY mosdns /app/mosdns
 RUN chmod +x /app/mosdns
 
