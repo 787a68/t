@@ -1,21 +1,14 @@
 FROM alpine:latest
 
-# 安装必要的依赖
-RUN apk add --no-cache ca-certificates
+# 安装必要的依赖，包括tzdata用于时区支持
+RUN apk add --no-cache ca-certificates tzdata
 
-# 创建非root用户
-RUN addgroup -S -g 1000 mosdns && \
-    adduser -S -u 1000 -G mosdns mosdns
+# 创建配置目录
+RUN mkdir -p /etc/mosdns
 
-WORKDIR /app
+# 复制二进制文件
+COPY mosdns /usr/local/bin/mosdns
+RUN chmod +x /usr/local/bin/mosdns
 
-# 复制二进制文件（在当前构建目录中）
-COPY mosdns /app/mosdns
-RUN chmod +x /app/mosdns
-
-# 使用非root用户
-USER mosdns
-
-# 默认命令
-ENTRYPOINT ["/app/mosdns"]
-CMD ["--help"]
+# 设置工作目录
+WORKDIR /etc/mosdns
