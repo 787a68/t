@@ -1,10 +1,9 @@
-name: Build and Publish mosdns Docker Image
+name: Build and Publish mosdns-x Docker Image
 
 on:
   schedule:
-    # 每月1号UTC时间凌晨执行
     - cron: '0 0 1 * *'
-  workflow_dispatch: # 允许手动触发
+  workflow_dispatch:
 
 jobs:
   build-and-publish:
@@ -13,18 +12,11 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Setup build directory
-        run: |
-          mkdir -p docker-build
-          cp Dockerfile docker-build/
-
       - name: Get latest release info
         id: get_latest_release
         run: |
-          # 获取最新的release信息
           LATEST_RELEASE=$(curl -s https://api.github.com/repos/pmkol/mosdns-x/releases/latest)
           VERSION=$(echo $LATEST_RELEASE | jq -r '.tag_name')
-          # 获取amd64版本
           ASSETS_URL=$(echo $LATEST_RELEASE | jq -r '.assets[].browser_download_url | select(contains("mosdns-linux-amd64.zip"))')
           
           if [ -z "$ASSETS_URL" ]; then
@@ -34,19 +26,12 @@ jobs:
           
           echo "VERSION=$VERSION" >> $GITHUB_ENV
           echo "ASSETS_URL=$ASSETS_URL" >> $GITHUB_ENV
-          echo "Found version: $VERSION"
-          echo "Download URL: $ASSETS_URL"
 
-      - name: Download and prepare mosdns binary
+      - name: Download mosdns binary
         run: |
-          cd docker-build
-          echo "Downloading from: ${{ env.ASSETS_URL }}"
           wget -O mosdns-linux-amd64.zip "${{ env.ASSETS_URL }}"
           unzip mosdns-linux-amd64.zip
           chmod +x mosdns
-          # 验证文件
-          ls -la
-          file mosdns
 
       - name: Login to Docker Hub
         uses: docker/login-action@v2
@@ -57,12 +42,8 @@ jobs:
       - name: Build and push Docker image
         uses: docker/build-push-action@v4
         with:
-          context: ./docker-build
+          context: .
           push: true
           tags: |
-            ${{ secrets.DOCKERHUB_USERNAME }}/mosdns:${{ env.VERSION }}
-            ${{ secrets.DOCKERHUB_USERNAME }}/mosdns:latest
-
-      - name: Clean up
-        run: |
-          rm -rf docker-build
+            ${{ secrets.DOCKERHUB_USERNAME }}/mosdns-x:${{ env.VERSION }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/mosdns-x:latest
