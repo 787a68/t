@@ -4,10 +4,6 @@ name: Build & Push Multi-Arch Docker Image
 
 on:
   workflow_dispatch:
-    inputs:
-      tag:
-        description: '可选：手动指定要构建并推送的 Release Tag（如 v1.2.3）'
-        required: false
   repository_dispatch:
 
 permissions:
@@ -24,15 +20,11 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - name: 获取上游最新 Release Tag / 使用手动输入
+      - name: 获取上游最新 Release Tag
         id: get_tag
         run: |
-          if [[ "${{ github.event_name }}" == "workflow_dispatch" && -n "${{ github.event.inputs.tag }}" ]]; then
-            TAG=${{ github.event.inputs.tag }}
-          else
-            TAG=$(curl -s https://api.github.com/repos/pmkol/mosdns-x/releases/latest \
-              | jq -r .tag_name)
-          fi
+          TAG=$(curl -s https://api.github.com/repos/pmkol/mosdns-x/releases/latest \
+            | jq -r .tag_name)
           echo "tag=$TAG" >> $GITHUB_OUTPUT
 
       - name: 登录 GHCR
@@ -40,7 +32,7 @@ jobs:
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
-          password: ${{ secrets.GHCR_PAT }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: 构建并推送多架构镜像
         uses: docker/build-push-action@v5
