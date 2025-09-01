@@ -1,25 +1,19 @@
-FROM golang:latest as builder
+FROM --platform=$BUILDPLATFORM golang:1.21 AS builder
 
-COPY ./ /root/src/
-WORKDIR /root/src/
-RUN go build -ldflags "-s -w -X main.version=$(git describe --tags --long --always)" -trimpath -o mosdns
+ARG TARGETPLATFORM
+ARG MOSDNS_VERSION=main
 
-FROM alpine:latest
+WORKDIR /src
+RUN git clone --depth 1 --branch ${MOSDNS_VERSION} https://github.com/pmkol/mosdns-x.git .
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=${TARGETPLATFORM##*/} go build -o mosdns-x ./cmd/mosdns
 
-# 安装必要的依赖
-RUN apk add --no-cache ca-certificates tzdata
+FROM --platform=$TARGETPLATFORM debian:stable-slim
 
-# 从构建阶段复制二进制文件
-COPY --from=builder /root/src/mosdns /usr/local/bin/mosdns
-
-# 设置权限
-RUN chmod +x /usr/local/bin/mosdns
-
-# 创建配置目录
-RUN mkdir -p /etc/mosdns
-
-# 设置工作目录
 WORKDIR /etc/mosdns
+COPY --from=builder /src/mosdns-x /usr/bin/mosdns-x
 
-# 默认命令
-CMD ["mosdns", "--help"]
+EXPOSE 53/udp
+EXPOSE 53/tcp
+
+# 保持命令兼容原始参数
+ENTRYPOINT ["/usr/bin/mosdns-x"]

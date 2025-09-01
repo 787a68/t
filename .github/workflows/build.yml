@@ -1,0 +1,56 @@
+# .github/workflows/build-and-push-multiarch.yml
+
+name: Build & Push Multi-Arch Docker Image
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: '可选：手动指定要构建并推送的 Release Tag（如 v1.2.3）'
+        required: false
+  repository_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        arch: [amd64, arm64]
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: 获取上游最新 Release Tag / 使用手动输入
+        id: get_tag
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" && -n "${{ github.event.inputs.tag }}" ]]; then
+            TAG=${{ github.event.inputs.tag }}
+          else
+            TAG=$(curl -s https://api.github.com/repos/pmkol/mosdns-x/releases/latest \
+              | jq -r .tag_name)
+          fi
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+
+      - name: 登录 GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GHCR_PAT }}
+
+      - name: 构建并推送多架构镜像
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/mosdns-x:${{ steps.get_tag.outputs.tag }}
+            ghcr.io/${{ github.repository_owner }}/mosdns-x:latest
+          build-args: |
+            MOSDNS_VERSION=${{ steps.get_tag.outputs.tag }}
