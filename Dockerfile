@@ -17,4 +17,5 @@ COPY --from=builder /src/mosdns-x /usr/bin/mosdns-x
 EXPOSE 53/udp
 EXPOSE 53/tcp
 
+# 保持命令兼容原始参数
 ENTRYPOINT ["/usr/bin/mosdns-x"]
