@@ -22,11 +22,6 @@ RUN curl -sSL "https://github.com/pmkol/mosdns-x/releases/download/${VERSION}/mo
 # 这是最终发布的镜像，基于轻量的 alpine
 FROM alpine:latest
 
-LABEL maintainer="YourGitHubUsername"
-LABEL org.opencontainers.image.source="https://github.com/YourGitHubUsername/YourRepoName"
-LABEL org.opencontainers.image.description="mosdns-x Docker image with support for all original commands."
-LABEL org.opencontainers.image.licenses="MIT"
-
 # 从构建阶段复制 mosdns 可执行文件到最终镜像
 COPY --from=builder /mosdns /usr/bin/mosdns
 
@@ -44,6 +39,5 @@ EXPOSE 53/udp
 # 设置容器的入口点，使其可以直接接收 mosdns 的所有命令
 ENTRYPOINT ["/usr/bin/mosdns"]
 
-# 设置默认执行的命令。这是最常见的启动方式。
-# 用户可以在 `docker run` 时轻松覆盖此命令及其参数。
+# 设置默认执行的命令，方便直接启动服务
 CMD ["start", "--dir", "/etc/mosdns"]
